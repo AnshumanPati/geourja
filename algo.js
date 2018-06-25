@@ -1,12 +1,20 @@
-var fs = require('fs');
+import * as _ from 'underscore';
+//var fs = require('fs');
 //const turf = require("@turf/turf")
-const _ = require('underscore');
-var obj = JSON.parse(fs.readFileSync('lines.json', 'utf8'));
+// const _ = require('underscore');
+//var obj = JSON.parse(fs.readFileSync('lines.json', 'utf8'));
 //preparing JSON for further processing
-feature_list = obj.features
-var obj_point = JSON.parse(fs.readFileSync('points.json', 'utf8'));
+
+// $.getScript("./lines.json",function( data, textStatus, jqxhr ) {
+//   console.log( data ); // Data returned
+//   console.log( textStatus ); // Success
+//   console.log( jqxhr.status ); // 200
+//   console.log( "Load was performed." );
+// });
+// var feature_list = [];
+
+//var obj_point = JSON.parse(fs.readFileSync('points.json', 'utf8'));
 //preparing JSON for further processing
-feature_list_points = obj_point.features
 
 //definitions
 function Node(data,lat,long,capacity) {
@@ -84,7 +92,7 @@ function geoDistance(lat1, lon1, lat2, lon2) {
     return dist
 }
 
-findKm = function(currentNode) {
+function findKm(currentNode) {
 
     if(currentNode.children.length==0){
         // console.log('ye zero hai');
@@ -98,7 +106,7 @@ findKm = function(currentNode) {
     return currentNode.km;
 };
 
-findKv = function(currentNode) {
+function findKv(currentNode) {
 
     if(currentNode.children.length==0){
         // console.log('ye zero hai');
@@ -140,7 +148,7 @@ function getNextVal (num, direction){
         return "";
     }
 }
-renum = function(currentNode){
+function renum(currentNode){
 
 if(currentNode.children.length==0){
         // console.log('ye zero hai');
@@ -197,18 +205,8 @@ if(currentNode.children.length==0){
         // callback(currentNode);
 
 }
-sorted_list = _.sortBy(feature_list, function(feature){
-    // return "" + feature.properties.feeder_id + feature.properties.start_point
-    return feature.properties.id
-})
-grouped_list = _.groupBy(sorted_list,function(feature){
-    return feature.properties.feeder_id
-})
-no_of_feeder_id = _.uniq(sorted_list,true,function(feature){
-    return feature.properties.feeder_id
-})
 
-createTree = function(feeder_id){
+function createTree(feeder_id,grouped_list){
     feeder_id=240
     rows=grouped_list[feeder_id]
     console.log("creating tree of ",rows.length,"rows with root as",rows[0].properties.start_point);
@@ -248,8 +246,5 @@ createTree = function(feeder_id){
     })
 }
 
-for( var i=0;i<no_of_feeder_id.length;i++){
-    createTree(no_of_feeder_id[i].properties.feeder_id)
-}
 // console.log(geoDistance(feature_list[0].geometry.coordinates[0][1],feature_list[0].geometry.coordinates[0][0],feature_list[0].geometry.coordinates[1][1],feature_list[0].geometry.coordinates[1][0]));
  
