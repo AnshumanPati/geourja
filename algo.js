@@ -1,20 +1,12 @@
-import * as _ from 'underscore';
-//var fs = require('fs');
-//const turf = require("@turf/turf")
+// var fs = require('fs');
+// //const sturf = require("@turf/turf")
 // const _ = require('underscore');
-//var obj = JSON.parse(fs.readFileSync('lines.json', 'utf8'));
-//preparing JSON for further processing
-
-// $.getScript("./lines.json",function( data, textStatus, jqxhr ) {
-//   console.log( data ); // Data returned
-//   console.log( textStatus ); // Success
-//   console.log( jqxhr.status ); // 200
-//   console.log( "Load was performed." );
-// });
-// var feature_list = [];
-
-//var obj_point = JSON.parse(fs.readFileSync('points.json', 'utf8'));
-//preparing JSON for further processing
+// var obj = JSON.parse(fs.readFileSync('lines.json', 'utf8'));
+// //preparing JSON for further processing
+// feature_list = obj.features
+// var obj_point = JSON.parse(fs.readFileSync('points.json', 'utf8'));
+// //preparing JSON for further processing
+// feature_list_points = obj_point.features
 
 //definitions
 function Node(data,lat,long,capacity) {
@@ -28,12 +20,14 @@ function Node(data,lat,long,capacity) {
     this.children = [];
     this.prod=0;
     this.rename="0";
-}
+    // featurePole;
+    // feature line;
+};
 
 function Tree(data,lat,long,capacity) {
     var node = new Node(data,lat,long,capacity);
     this._root = node;
-}
+};
 
 Tree.prototype.add = function(value,value_lat,value_long,capacity,parent,callback) {
     var found_flag=0;
@@ -61,6 +55,30 @@ Tree.prototype.add = function(value,value_lat,value_long,capacity,parent,callbac
     }
 
 };
+
+Tree.prototype.search = function(value,callback) {
+    var found_flag=0;
+    // this is a recurse and immediately-invoking function 
+    (function recurse(currentNode,value,parent) {
+        // step 3
+        if(currentNode.data == parent){
+            found_flag=1;
+            callback(currentNode);
+            return;
+        }
+        // step 3
+        for (var i = 0, length = currentNode.children.length; i < length; i++) {
+            // step 4
+            recurse(currentNode.children[i],value,parent);
+        }     
+        // step 1
+    })(this._root,value,parent);
+    if(found_flag==0){
+        callback(-1);
+    }
+
+};
+
 Tree.prototype.traverseDF = function(callback) {
  
     // this is a recurse and immediately-invoking function 
@@ -148,6 +166,7 @@ function getNextVal (num, direction){
         return "";
     }
 }
+
 function renum(currentNode){
 
 if(currentNode.children.length==0){
@@ -205,8 +224,18 @@ if(currentNode.children.length==0){
         // callback(currentNode);
 
 }
+// sorted_list = _.sortBy(feature_list, function(feature){
+//     // return "" + feature.properties.feeder_id + feature.properties.start_point
+//     return feature.properties.id
+// })
+// grouped_list = _.groupBy(sorted_list,function(feature){
+//     return feature.properties.feeder_id
+// })
+// no_of_feeder_id = _.uniq(sorted_list,true,function(feature){
+//     return feature.properties.feeder_id
+// })
 
-function createTree(feeder_id,grouped_list){
+function createTree(feeder_id,grouped_list,feature_list_points){
     feeder_id=240
     rows=grouped_list[feeder_id]
     console.log("creating tree of ",rows.length,"rows with root as",rows[0].properties.start_point);
@@ -238,13 +267,16 @@ function createTree(feeder_id,grouped_list){
         });
     }  
     console.log(count,'done',count2,'failed');
-    console.log(findKm(tree._root));
-    console.log(findKv(tree._root));
+    console.log("KVA =",findKm(tree._root));
+    console.log("KM =",findKv(tree._root));
     renum(tree._root);
-    tree.traverseDF(function(node){
-        console.log(node.rename)
-    })
+    // tree.traverseDF(function(node){
+    //     console.log(node.rename)
+    // })
 }
 
+// for( var i=0;i<no_of_feeder_id.length;i++){
+//     createTree(no_of_feeder_id[i].properties.feeder_id)
+// }
 // console.log(geoDistance(feature_list[0].geometry.coordinates[0][1],feature_list[0].geometry.coordinates[0][0],feature_list[0].geometry.coordinates[1][1],feature_list[0].geometry.coordinates[1][0]));
  
