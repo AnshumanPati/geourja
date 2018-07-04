@@ -9,6 +9,9 @@
 // feature_list_points = obj_point.features
 
 //definitions
+//var totalKv=0;
+var obj = {};
+// var counter=0;
 function Node(data,lat,long,capacity) {
     this.data = data;
     this.km = 0;
@@ -20,9 +23,15 @@ function Node(data,lat,long,capacity) {
     this.children = [];
     this.prod=0;
     this.rename="0";
-    // featurePole;
+    this.line_current=0;
+    this.resistance=0;
+    this.heat_loss=0;
+    this.transformer_loss=0;
+
+    // feature Pole;
     // feature line;
 };
+//console.log(obj);
 
 function Tree(data,lat,long,capacity) {
     var node = new Node(data,lat,long,capacity);
@@ -39,6 +48,7 @@ Tree.prototype.add = function(value,value_lat,value_long,capacity,parent,callbac
             // console.log(node.capacity);
             node.parent = currentNode;
             currentNode.children.push(node);
+            window.obj.value = node;
             found_flag=1;
             callback(currentNode);
             return;
@@ -56,25 +66,29 @@ Tree.prototype.add = function(value,value_lat,value_long,capacity,parent,callbac
 
 };
 
+
+
+
+
 Tree.prototype.search = function(value,callback) {
     var found_flag=0;
+    // console.log(value);
     // this is a recurse and immediately-invoking function 
-    (function recurse(currentNode,value,parent) {
+    (function recurse(currentNode,value) {
         // step 3
-        if(currentNode.data == parent){
+        if(currentNode.data == value){
             found_flag=1;
             callback(currentNode);
-            return;
         }
         // step 3
         for (var i = 0, length = currentNode.children.length; i < length; i++) {
             // step 4
-            recurse(currentNode.children[i],value,parent);
+            recurse(currentNode.children[i],value);
         }     
         // step 1
-    })(this._root,value,parent);
+    })(this._root,value);
     if(found_flag==0){
-        callback(-1);
+        return("-1");
     }
 
 };
@@ -84,6 +98,7 @@ Tree.prototype.traverseDF = function(callback) {
     // this is a recurse and immediately-invoking function 
     (function recurse(currentNode) {
         // step 2
+        window.counter+=1;
         for (var i = 0, length = currentNode.children.length; i < length; i++) {
             // step 3
             recurse(currentNode.children[i]);
@@ -110,20 +125,6 @@ function geoDistance(lat1, lon1, lat2, lon2) {
     return dist
 }
 
-function findKm(currentNode) {
-
-    if(currentNode.children.length==0){
-        // console.log('ye zero hai');
-        return 0;
-    }
-    for (var i = 0, length = currentNode.children.length; i < length; i++) {
-        currentNode.km=geoDistance(currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y)+findKm(currentNode.children[i]);
-        // console.log(geoDistance(currentNode.y,currentNode.x,currentNode.children[i].y,currentNode.children[i].x),currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y,currentNode.data,currentNode.children[i].data);   
-    }
-    // console.log(currentNode.km,currentNode.data);
-    return currentNode.km;
-};
-
 function findKv(currentNode) {
 
     if(currentNode.children.length==0){
@@ -137,9 +138,43 @@ function findKv(currentNode) {
     }
     currentNode.kv=currentNode.capacity+child_sum;
     // console.log(currentNode.km,currentNode.data);
-    currentNode.prod=currentNode.km*currentNode.kv;
     return currentNode.kv;
 };
+
+function findKm(currentNode) {
+    currentNode.km=0;
+    if(currentNode.children.length==0){
+        // console.log('ye zero hai');
+        return 0;
+    }
+    for (var i = 0, length = currentNode.children.length; i < length; i++) {
+        
+    if(currentNode.children[i].kv > 0 )
+        currentNode.km+=geoDistance(currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y)+findKm(currentNode.children[i]);
+
+        // console.log(geoDistance(currentNode.y,currentNode.x,currentNode.children[i].y,currentNode.children[i].x),currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y,currentNode.data,currentNode.children[i].data);   
+    }
+    // console.log(currentNode.km,currentNode.data);
+    currentNode.prod=currentNode.km*currentNode.kv;
+    return currentNode.km;
+};
+
+// function totalKv(currentNode){
+//     //  if(currentNode.children.length==0){
+//     //     // console.log('ye zero hai');
+//     //     return currentNode.capacity;
+//     // }
+//     var kv_sum = 0;
+//     for (var i = 0, length = currentNode.children.length; i < length; i++) {
+//         kv_sum+=findKv(currentNode);
+//         // console.log(geoDistance(currentNode.y,currentNode.x,currentNode.children[i].y,currentNode.children[i].x),currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y,currentNode.data,currentNode.children[i].data);   
+//     }
+//     // currentNode.kv=currentNode.capacity+child_sum;
+//     // // console.log(currentNode.km,currentNode.data);
+//     // currentNode.prod=currentNode.km*currentNode.kv;
+//     return kv_sum;
+// };
+
 
 function getNextVal (num, direction){
     if(direction == "s"){
@@ -236,7 +271,7 @@ if(currentNode.children.length==0){
 // })
 
 function createTree(feeder_id,grouped_list,feature_list_points){
-    feeder_id=240
+    // feeder_id=240
     rows=grouped_list[feeder_id]
     console.log("creating tree of ",rows.length,"rows with root as",rows[0].properties.start_point);
     // finds point with the same id for capacity property
@@ -245,6 +280,7 @@ function createTree(feeder_id,grouped_list,feature_list_points){
             return true });
     // adds new base(root node to) the tree
     var tree = new Tree(rows[0].properties.start_point,rows[0].geometry.coordinates[0][1],rows[0].geometry.coordinates[0][0],point.properties.capacity);
+    
     var count=0,count2=0;
     for (var i = 0; i < rows.length; i++) {
         // console.log(rows[i].properties.end_point)
@@ -267,12 +303,60 @@ function createTree(feeder_id,grouped_list,feature_list_points){
         });
     }  
     console.log(count,'done',count2,'failed');
-    console.log("KVA =",findKm(tree._root));
-    console.log("KM =",findKv(tree._root));
+    console.log("KVA =",findKv(tree._root));
+    console.log("KM =",findKm(tree._root));
     renum(tree._root);
+    return tree;
     // tree.traverseDF(function(node){
     //     console.log(node.rename)
     // })
+}
+
+// function createTreeValuePair(feeder_id,grouped_list,feature_list_points){
+//     feeder_id=240;
+//     rows=grouped_list[feeder_id];
+//     for(var i=1; i<=rows.length;i++){
+
+//         obj.
+//     }
+//}
+
+function getTransformerLoss(capacity, line_current){
+
+    return 6;
+
+}
+
+function electricalLoss(data, lat, long, capacity, rootNode, max_amp){
+    //Given SS voltage, max ampere and pf.
+    var ss_voltage = 11;
+    var total_kv = rootNode.kv;
+    var connected_load_ampere = total_kv/(sqrt(3)*ss_voltage);
+    var amp_df = max_amp/connected_load_ampere;
+
+
+    (function traverseNode(currentNode, ss_voltage, amp_df) {
+        // step 2
+        for (var i = 0, length = currentNode.children.length; i < length; i++) {
+
+            currentNode.children[i].line_current = (currentNode.children[i].kv*amp_df)/(sqrt(3)*ss_voltage);
+            currentNode.heat_loss = currentNode.line_current*currentNode.line_current*currentNode.resistance;
+            // step 3
+            if(currentNode.capacity!=0)
+            {
+                currentNode.transformer_loss= getTransformerLoss(currentNode.capacity, currentNode.line_current);
+            }
+
+            traverseNode(currentNode.children[i], ss_voltage, amp_df);
+
+        }
+ 
+        // step 4
+        // callback(currentNode);
+         
+        // step 1
+    })(rootNode, ss_voltage, amp_df);
+
 }
 
 // for( var i=0;i<no_of_feeder_id.length;i++){
