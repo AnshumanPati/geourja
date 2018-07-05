@@ -1,4 +1,4 @@
-var treee;
+// var treee;
 import 'ol/ol.css';
 import GeoJSON from 'ol/format/GeoJSON';
 import Map from 'ol/Map';
@@ -34,8 +34,10 @@ $.getJSON('./data/lines2.json', function(data) {
     $.getJSON('./data/points2.json', function(data) {
       var obj_point = data;
       var feature_list_points = obj_point.features;
+      // var window.treee;
         for( var i=0;i<no_of_feeder_id.length;i++){
-          window.treee = createTree(no_of_feeder_id[i].properties.feeder_id,grouped_list,feature_list_points);
+          // var window.treee;
+           window.treee = createTree(no_of_feeder_id[i].properties.feeder_id,grouped_list,feature_list_points);
           //window.key_value = createTreeValuePair(no_of_feeder_id[i].properties.feeder_id,grouped_list,feature_list_points);
            console.log(window.treee);
         }

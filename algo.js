@@ -11,8 +11,13 @@
 //definitions
 //var totalKv=0;
 var obj = {};
+//var resistance={};
+var resistance={};
+var transformer_losses={};
+
+
 // var counter=0;
-function Node(data,lat,long,capacity) {
+function Node(data,lat,long,capacity, conductor_type) {
     this.data = data;
     this.km = 0;
     this.kv = null;
@@ -24,13 +29,18 @@ function Node(data,lat,long,capacity) {
     this.prod=0;
     this.rename="0";
     this.line_current=0;
-    this.resistance=0;
-    this.heat_loss=0;
+    this.conductor_type=conductor_type;
+    this.resistance=getPropertyResistance(conductor_type); 
+    this.distance=0; //changes made
+    this.power_loss=0;
     this.transformer_loss=0;
-
+    this.percentage_voltage_drop = 0;
+    // this.resistance=resistance;
     // feature Pole;
     // feature line;
 };
+
+
 //console.log(obj);
 
 function Tree(data,lat,long,capacity) {
@@ -38,13 +48,13 @@ function Tree(data,lat,long,capacity) {
     this._root = node;
 };
 
-Tree.prototype.add = function(value,value_lat,value_long,capacity,parent,callback) {
+Tree.prototype.add = function(value,value_lat,value_long,capacity,conductor_type,parent,callback) {
     var found_flag=0;
     // this is a recurse and immediately-invoking function 
     (function recurse(currentNode,value,parent) {
         // step 3
         if(currentNode.data == parent){
-            var node = new Node(value,value_lat,value_long,capacity);
+            var node = new Node(value,value_lat,value_long,capacity,conductor_type);
             // console.log(node.capacity);
             node.parent = currentNode;
             currentNode.children.push(node);
@@ -151,7 +161,8 @@ function findKm(currentNode) {
         
     if(currentNode.children[i].kv > 0 )
         currentNode.km+=geoDistance(currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y)+findKm(currentNode.children[i]);
-
+        currentNode.children[i].distance=geoDistance(currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y); //changes made
+        //changes made
         // console.log(geoDistance(currentNode.y,currentNode.x,currentNode.children[i].y,currentNode.children[i].x),currentNode.x,currentNode.y,currentNode.children[i].x,currentNode.children[i].y,currentNode.data,currentNode.children[i].data);   
     }
     // console.log(currentNode.km,currentNode.data);
@@ -291,7 +302,7 @@ function createTree(feeder_id,grouped_list,feature_list_points){
         // console.log(point.properties.capacity);
         // console.log(rows[i].properties.end_point,rows[i].geometry.coordinates[1][1],rows[i].geometry.coordinates[1][0],rows[i].properties.start_point);
         //adds new node to the tree
-        tree.add(rows[i].properties.end_point,rows[i].geometry.coordinates[1][1],rows[i].geometry.coordinates[1][0],point.properties.capacity,rows[i].properties.start_point,function(node){
+        tree.add(rows[i].properties.end_point,rows[i].geometry.coordinates[1][1],rows[i].geometry.coordinates[1][0],point.properties.capacity,rows[i].properties.conductor_type,rows[i].properties.start_point,function(node){
             if(rows[i].properties.start_point==node.data){
                 count+=1;
             }
@@ -305,12 +316,15 @@ function createTree(feeder_id,grouped_list,feature_list_points){
     console.log(count,'done',count2,'failed');
     console.log("KVA =",findKv(tree._root));
     console.log("KM =",findKm(tree._root));
+    console.log("Electrical Loss Bro =", getElectricalLoss(tree._root,23.45));
     renum(tree._root);
+    //electricalLoss(tree._root,25);
+    //console.log(getTransformerLoss(currentNode.capacity,currentNode.line_current));
     return tree;
     // tree.traverseDF(function(node){
     //     console.log(node.rename)
     // })
-}
+};
 
 // function createTreeValuePair(feeder_id,grouped_list,feature_list_points){
 //     feeder_id=240;
@@ -321,42 +335,113 @@ function createTree(feeder_id,grouped_list,feature_list_points){
 //     }
 //}
 
+function getPropertyResistance(conductor_type){
+
+
+    resistance["AAAC-Rabbit (55mm2)"] = 1.0692;
+    resistance["AAAC-Weasel (34 mm2)"] = 0.67068
+    resistance["AAAC-DOG (100 mm2)"] = 0.36612;
+    resistance["ACSR-Rabbit (50 mm2)"] = 0.596592;
+    resistance["ACSR-Wease (30 mm2)"] = 1.003212;
+    resistance["ACSR-DOG (105 mm2)"] = 0.301536;
+    resistance["AB Cable (95 mm2)"] = 0.32;
+    resistance["AB Cable (70 mm2)"] = 0.443;
+    resistance["AB Cable (120 mm2)"] = 0.253;
+    resistance["AB Cable (35 mm2)"] = 0.868;
+    resistance["3C X 70sqmm"] = 0.5700;
+    resistance["3C X 95sqmm"] = 0.416;
+    resistance["3C x 120sqmm"] = 0.268;
+    resistance["3C X 150sqmm"] = 0.268;
+    resistance["3C X 185sqmm"] = 0.211;
+    resistance["3C X 225sqmm"] = 0.189;
+    resistance["3C X 240sqmm"] = 0.161;
+    resistance["3C X 300 sqmm"] = 0.121;
+
+    return resistance[conductor_type];
+};
+
+function getPropertyLoad(capacity){
+
+    transformer_losses["0"]=[0,0];
+    transformer_losses["5"]=[25,140];
+    transformer_losses["10"]=[45,225];
+    transformer_losses["16"]=[65,425];
+    transformer_losses["25"]=[100,685];
+    transformer_losses["50"]=[150,1300];
+    transformer_losses["63"]=[180,1235];
+    transformer_losses["100"]=[260,1760];
+    transformer_losses["200"]=[480,2500];
+    transformer_losses["250"]=[480,2500];
+    transformer_losses["300"]=[580,3850];
+    transformer_losses["500"]=[850,5600];
+    transformer_losses["600"]=[1100,7450];
+    transformer_losses["1000"]=[1650,12500];
+
+    return transformer_losses[capacity];
+}
+
+//function getProperty
+
 function getTransformerLoss(capacity, line_current){
 
-    return 6;
+    var no_load_loss = getPropertyLoad(capacity)[0];
+    var load_loss = getPropertyLoad(capacity)[1]*line_current;
+    var total_loss = no_load_loss + load_loss;
+    return (total_loss);
+
+    // return resistance[conductor_type];
+};
+
+function getElectricalLoss(currentNode,max_amp){ //cut rootNode for currentNode
+    //Given SS voltage, max ampere and pf.
+    var ss_voltage = 11;
+    var total_kv = currentNode.kv;
+    var connected_load_ampere = total_kv/(Math.sqrt(3)*ss_voltage);
+    var amp_df = max_amp/connected_load_ampere;
+    var factor_k = amp_df*amp_df;
+
+    for (var i = 0, length = currentNode.children.length; i < length; i++) {
+    currentNode.line_current = connected_load_ampere*amp_df;
+    currentNode.power_loss = currentNode.line_current*currentNode.line_current*currentNode.resistance*currentNode.distance;
+    if(currentNode.capacity>0)
+        currentNode.transformer_loss=getTransformerLoss(currentNode.capacity, currentNode.line_current);
+    getVoltageDrop(currentNode);
+    getElectricalLoss(currentNode.children[i]);
+    }
+    return currentNode.power_loss;
+
+    //console.log(getPropertyLoad(10)[0]);
+    //console.log(getProperty("AAAC-Rabbit (55mm2)"));
+    // console.log(transformer_losses[])
+    // (function traverseNode(currentNode, ss_voltage, amp_df) {
+    //     // step 2
+    //     for (var i = 0, length = currentNode.children.length; i < length; i++) {
+
+    //         currentNode.children[i].line_current = (currentNode.children[i].kv*amp_df)/(sqrt(3)*ss_voltage);
+    //         currentNode.heat_loss = currentNode.line_current*currentNode.line_current*currentNode.resistance;
+    //         // step 3
+    //         if(currentNode.capacity!=0)
+    //         {
+    //             currentNode.transformer_loss= getTransformerLoss(currentNode.capacity, currentNode.line_current);
+    //         }
+
+    //         traverseNode(currentNode.children[i], ss_voltage, amp_df);
+
+    //     }
+ 
+    //     // step 4
+    //     // callback(currentNode);
+         
+    //     // step 1
+    // })(rootNode, ss_voltage, amp_df);
 
 }
 
-function electricalLoss(data, lat, long, capacity, rootNode, max_amp){
-    //Given SS voltage, max ampere and pf.
-    var ss_voltage = 11;
-    var total_kv = rootNode.kv;
-    var connected_load_ampere = total_kv/(sqrt(3)*ss_voltage);
-    var amp_df = max_amp/connected_load_ampere;
+function getVoltageDrop(currentNode){
 
-
-    (function traverseNode(currentNode, ss_voltage, amp_df) {
-        // step 2
-        for (var i = 0, length = currentNode.children.length; i < length; i++) {
-
-            currentNode.children[i].line_current = (currentNode.children[i].kv*amp_df)/(sqrt(3)*ss_voltage);
-            currentNode.heat_loss = currentNode.line_current*currentNode.line_current*currentNode.resistance;
-            // step 3
-            if(currentNode.capacity!=0)
-            {
-                currentNode.transformer_loss= getTransformerLoss(currentNode.capacity, currentNode.line_current);
-            }
-
-            traverseNode(currentNode.children[i], ss_voltage, amp_df);
-
-        }
- 
-        // step 4
-        // callback(currentNode);
-         
-        // step 1
-    })(rootNode, ss_voltage, amp_df);
-
+    var voltage_drop = (Math.sqrt(3)*currentNode.power_loss*currentNode.resistance)/currentNode.distance;
+    currentNode.percentage_voltage_drop = voltage_drop*100;
+    return currentNode.percentage_voltage_drop;
 }
 
 // for( var i=0;i<no_of_feeder_id.length;i++){
