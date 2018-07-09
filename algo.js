@@ -281,51 +281,6 @@ if(currentNode.children.length==0){
 //     return feature.properties.feeder_id
 // })
 
-function createTree(feeder_id,grouped_list,feature_list_points){
-    // feeder_id=240
-    rows=grouped_list[feeder_id]
-    console.log("creating tree of ",rows.length,"rows with root as",rows[0].properties.start_point);
-    // finds point with the same id for capacity property
-    point = _.find(feature_list_points, function(feature){ 
-        if(feature.properties.id == rows[0].properties.start_point)
-            return true });
-    // adds new base(root node to) the tree
-    var tree = new Tree(rows[0].properties.start_point,rows[0].geometry.coordinates[0][1],rows[0].geometry.coordinates[0][0],point.properties.capacity);
-    
-    var count=0,count2=0;
-    for (var i = 0; i < rows.length; i++) {
-        // console.log(rows[i].properties.end_point)
-        // finds capacity of new to be added node
-        point = _.find(feature_list_points, function(feature){ 
-                    if(feature.properties.id == rows[i].properties.end_point)
-                return true });
-        // console.log(point.properties.capacity);
-        // console.log(rows[i].properties.end_point,rows[i].geometry.coordinates[1][1],rows[i].geometry.coordinates[1][0],rows[i].properties.start_point);
-        //adds new node to the tree
-        tree.add(rows[i].properties.end_point,rows[i].geometry.coordinates[1][1],rows[i].geometry.coordinates[1][0],point.properties.capacity,rows[i].properties.conductor_type,rows[i].properties.start_point,function(node){
-            if(rows[i].properties.start_point==node.data){
-                count+=1;
-            }
-            else {
-                count2+=1;
-                console.log("ye nai hua",rows[i].properties.id,rows[i].properties.start_point,rows[i].properties.end_point);
-            }
-
-        });
-    }  
-    console.log(count,'done',count2,'failed');
-    console.log("KVA =",findKv(tree._root));
-    console.log("KM =",findKm(tree._root));
-    console.log("Electrical Loss Bro =", getElectricalLoss(tree._root,23.45));
-    renum(tree._root);
-    //electricalLoss(tree._root,25);
-    //console.log(getTransformerLoss(currentNode.capacity,currentNode.line_current));
-    return tree;
-    // tree.traverseDF(function(node){
-    //     console.log(node.rename)
-    // })
-};
-
 // function createTreeValuePair(feeder_id,grouped_list,feature_list_points){
 //     feeder_id=240;
 //     rows=grouped_list[feeder_id];
@@ -338,7 +293,7 @@ function createTree(feeder_id,grouped_list,feature_list_points){
 function getPropertyResistance(conductor_type){
 
 
-    resistance["AAAC-Rabbit (55mm2)"] = 1.0692;
+    resistance["AAAC-Rabbit (55 mm2)"] = 1.0692;
     resistance["AAAC-Weasel (34 mm2)"] = 0.67068
     resistance["AAAC-DOG (100 mm2)"] = 0.36612;
     resistance["ACSR-Rabbit (50 mm2)"] = 0.596592;
@@ -387,27 +342,33 @@ function getTransformerLoss(capacity, line_current){
     var no_load_loss = getPropertyLoad(capacity)[0];
     var load_loss = getPropertyLoad(capacity)[1]*line_current;
     var total_loss = no_load_loss + load_loss;
+    // console.log(total_loss);
     return (total_loss);
+
 
     // return resistance[conductor_type];
 };
 
-function getElectricalLoss(currentNode,max_amp){ //cut rootNode for currentNode
+function getElectricalLoss(root_kv,currentNode,max_amp){ //cut rootNode for currentNode
     //Given SS voltage, max ampere and pf.
     var ss_voltage = 11;
-    var total_kv = currentNode.kv;
+    var total_kv = root_kv;
     var connected_load_ampere = total_kv/(Math.sqrt(3)*ss_voltage);
     var amp_df = max_amp/connected_load_ampere;
     var factor_k = amp_df*amp_df;
 
     for (var i = 0, length = currentNode.children.length; i < length; i++) {
-    currentNode.line_current = connected_load_ampere*amp_df;
-    currentNode.power_loss = currentNode.line_current*currentNode.line_current*currentNode.resistance*currentNode.distance;
-    if(currentNode.capacity>0)
-        currentNode.transformer_loss=getTransformerLoss(currentNode.capacity, currentNode.line_current);
-    getVoltageDrop(currentNode);
-    getElectricalLoss(currentNode.children[i]);
+        currentNode.line_current = (currentNode.kv*amp_df)/(Math.sqrt(3)*ss_voltage);
+        // console.log(currentNode.line_current);
+        currentNode.power_loss = currentNode.line_current*currentNode.line_current*currentNode.resistance*currentNode.distance;
+        // console.log(currentNode.distance);
+        if(currentNode.capacity > 0)
+            currentNode.transformer_loss=getTransformerLoss(currentNode.capacity, currentNode.line_current);
+            // console.log(currentNode.transformer_loss);
+        getVoltageDrop(currentNode);
+        getElectricalLoss(root_kv,currentNode.children[i],max_amp);
     }
+    // console.log(currentNode.power_loss,currentNode.rename);
     return currentNode.power_loss;
 
     //console.log(getPropertyLoad(10)[0]);
@@ -440,7 +401,7 @@ function getElectricalLoss(currentNode,max_amp){ //cut rootNode for currentNode
 function getVoltageDrop(currentNode){
 
     var voltage_drop = (Math.sqrt(3)*currentNode.power_loss*currentNode.resistance)/currentNode.distance;
-    currentNode.percentage_voltage_drop = voltage_drop*100;
+    currentNode.percentage_voltage_drop = voltage_drop/100;
     return currentNode.percentage_voltage_drop;
 }
 
@@ -449,3 +410,47 @@ function getVoltageDrop(currentNode){
 // }
 // console.log(geoDistance(feature_list[0].geometry.coordinates[0][1],feature_list[0].geometry.coordinates[0][0],feature_list[0].geometry.coordinates[1][1],feature_list[0].geometry.coordinates[1][0]));
  
+function createTree(feeder_id,grouped_list,feature_list_points){
+    // feeder_id=240
+    rows=grouped_list[feeder_id]
+    console.log("creating tree of ",rows.length,"rows with root as",rows[0].properties.start_point);
+    // finds point with the same id for capacity property
+    point = _.find(feature_list_points, function(feature){ 
+        if(feature.properties.id == rows[0].properties.start_point)
+            return true });
+    // adds new base(root node to) the tree
+    var tree = new Tree(rows[0].properties.start_point,rows[0].geometry.coordinates[0][1],rows[0].geometry.coordinates[0][0],point.properties.capacity);
+    
+    var count=0,count2=0;
+    for (var i = 0; i < rows.length; i++) {
+        // console.log(rows[i].properties.end_point)
+        // finds capacity of new to be added node
+        point = _.find(feature_list_points, function(feature){ 
+                    if(feature.properties.id == rows[i].properties.end_point)
+                return true });
+        // console.log(point.properties.capacity);
+        // console.log(rows[i].properties.end_point,rows[i].geometry.coordinates[1][1],rows[i].geometry.coordinates[1][0],rows[i].properties.start_point);
+        //adds new node to the tree
+        tree.add(rows[i].properties.end_point,rows[i].geometry.coordinates[1][1],rows[i].geometry.coordinates[1][0],point.properties.capacity,rows[i].properties.conductor_type,rows[i].properties.start_point,function(node){
+            if(rows[i].properties.start_point==node.data){
+                count+=1;
+            }
+            else {
+                count2+=1;
+                console.log("ye nai hua",rows[i].properties.id,rows[i].properties.start_point,rows[i].properties.end_point);
+            }
+
+        });
+    }  
+    console.log(count,'done',count2,'failed');
+    console.log("KVA =",findKv(tree._root));
+    console.log("KM =",findKm(tree._root));
+    renum(tree._root);
+    console.log("Electrical Loss =", getElectricalLoss(tree._root.kv,tree._root.children[0],23.45));
+    //electricalLoss(tree._root,25);
+    //console.log(getTransformerLoss(currentNode.capacity,currentNode.line_current));
+    return tree;
+    // tree.traverseDF(function(node){
+    //     console.log(node.rename)
+    // })
+};

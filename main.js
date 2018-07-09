@@ -103,9 +103,9 @@ const map = new Map({
 // map.addInteraction(new Modify({
 //   source: source
 // }));
-map.addInteraction(new Snap({
-  source: source
-}));
+// map.addInteraction(new Snap({
+//   source: source
+// }));
 sync(map);
 
 const clear = document.getElementById('clear');
@@ -152,6 +152,27 @@ var getText=function(feature,type)
       }
      window.treee.search(feature.values_.id,assign);
   }
+  else if(type == 'heatloss')
+  {
+   function assign(node){
+        text = "\n" + node.power_loss;
+      }
+     window.treee.search(feature.values_.id,assign);
+  }
+  else if(type == 'voltagedrop')
+  {
+   function assign(node){
+        text = "\n" + node.percentage_voltage_drop;
+      }
+     window.treee.search(feature.values_.id,assign);
+  }
+  else if(type == 'linecurrent')
+  {
+   function assign(node){
+        text = "\n" + node.line_current;
+      }
+     window.treee.search(feature.values_.id,assign);
+  }    
   else if(type == 'type')
   {
    function assign(node){
@@ -160,7 +181,7 @@ var getText=function(feature,type)
         text = "\n" + "P";
       }
       else 
-        text = "\n" + "T";
+        text = "\n" + "T" + "\n" + "\n" + node.transformer_loss;
       }
      window.treee.search(feature.values_.id,assign);
   }
