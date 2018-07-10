@@ -134,7 +134,7 @@ var getText=function(feature,type)
   if(type== 'km')
   {
        function assign(node){
-        text = "\n" + node.km;
+        text = "\n" + node.km.toFixed(2);
       }
      window.treee.search(feature.values_.id,assign);
   }
@@ -148,28 +148,37 @@ var getText=function(feature,type)
   else if(type == 'km*kva')
   {
    function assign(node){
-        text = "\n" + node.prod;
+        text = "\n" + node.prod.toFixed(2);
       }
      window.treee.search(feature.values_.id,assign);
   }
   else if(type == 'heatloss')
   {
    function assign(node){
-        text = "\n" + node.power_loss;
+        text = "\n" + node.power_loss.toFixed(2);
       }
      window.treee.search(feature.values_.id,assign);
   }
-  else if(type == 'voltagedrop')
+  else if(type == 'voltage')
   {
    function assign(node){
-        text = "\n" + node.percentage_voltage_drop;
+        text = "\n" + node.voltage.toFixed(2);
       }
      window.treee.search(feature.values_.id,assign);
+  }
+  else if(type == 'transformerloss')
+  {
+    function assign(node){
+      if(node.capacity)
+        text = "\n" + node.transformer_loss.toFixed(2);
+    }
+      window.treee.search(feature.values_.id,assign);
+
   }
   else if(type == 'linecurrent')
   {
    function assign(node){
-        text = "\n" + node.line_current;
+        text = "\n" + node.line_current.toFixed(2);
       }
      window.treee.search(feature.values_.id,assign);
   }    
@@ -181,7 +190,7 @@ var getText=function(feature,type)
         text = "\n" + "P";
       }
       else 
-        text = "\n" + "T" + "\n" + "\n" + node.transformer_loss;
+        text = "\n" + "T";
       }
      window.treee.search(feature.values_.id,assign);
   }

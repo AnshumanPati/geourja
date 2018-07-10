@@ -26,15 +26,16 @@ function Node(data,lat,long,capacity, conductor_type) {
     this.capacity = capacity;
     this.parent = null;
     this.children = [];
-    this.prod=0;
+    this.prod=0; //km x KVA
     this.rename="0";
     this.line_current=0;
     this.conductor_type=conductor_type;
-    this.resistance=getPropertyResistance(conductor_type); 
-    this.distance=0; //changes made
-    this.power_loss=0;
+    this.resistance= getPropertyResistance(conductor_type); 
+    this.distance= 0; //changes made
+    this.power_loss= 0;
     this.transformer_loss=0;
     this.percentage_voltage_drop = 0;
+    this.voltage = 0;
     // this.resistance=resistance;
     // feature Pole;
     // feature line;
@@ -365,7 +366,8 @@ function getElectricalLoss(root_kv,currentNode,max_amp){ //cut rootNode for curr
         if(currentNode.capacity > 0)
             currentNode.transformer_loss=getTransformerLoss(currentNode.capacity, currentNode.line_current);
             // console.log(currentNode.transformer_loss);
-        getVoltageDrop(currentNode);
+        //getVoltageDrop(currentNode);
+        // getVoltage(currentNode);
         getElectricalLoss(root_kv,currentNode.children[i],max_amp);
     }
     // console.log(currentNode.power_loss,currentNode.rename);
@@ -400,11 +402,42 @@ function getElectricalLoss(root_kv,currentNode,max_amp){ //cut rootNode for curr
 
 function getVoltageDrop(currentNode){
 
+
     var voltage_drop = (Math.sqrt(3)*currentNode.power_loss*currentNode.resistance)/currentNode.distance;
+    // voltage_drop=()
     currentNode.percentage_voltage_drop = voltage_drop/100;
     return currentNode.percentage_voltage_drop;
 }
 
+function getVoltage(root_volt, currentNode){
+
+    //currentNode.voltage = 11;
+    // var voltage_drop = (Math.sqrt(3)*currentNode.power_loss*currentNode.resistance)/currentNode.distance;
+    // // voltage_drop=()
+    var root_voltage = root_volt;
+    //console.log(currentNode.voltage, currentNode.percentage_voltage_drop);
+    for (var i = 0, length = currentNode.children.length; i < length; i++) {
+            getVoltageDrop(currentNode.children[i]);
+            console.log(currentNode.children[i].percentage_voltage_drop);
+            currentNode.children[i].voltage = root_voltage - ((currentNode.percentage_voltage_drop/(100*100))*root_voltage);
+            getVoltage(currentNode.children[i].voltage, currentNode.children[i]);
+    }
+    return currentNode.voltage;
+    // var voltage_drop = getVoltageDrop(currentNode.voltage,currentNode); 
+    // currentNode.percentage_voltage_drop = voltage_drop/100;
+    //console.log(currentNode.voltage, currentNode.percentage_voltage_drop);
+    // currentNode.children.voltage = currentNode.voltage - (currentNode.percentage_voltage_drop)*volt;
+
+    // //var voltage_drop = (Math.sqrt(3)*currentNode.power_loss*currentNode.resistance)/currentNode.distance;
+    //  for (var i = 0, length = currentNode.children.length; i < length; i++) {
+    
+    //     //var voltage_drop = getVoltageDrop(currentNode.voltage,currentNode);
+    //     // currentNode.children[i].voltage = currentNode.voltage - (currentNode.percentage_voltage_drop)*currentNode.voltage;
+    //     getVoltage(currentNode.children[i],currentNode.voltage);
+    // }    // getVoltage(currentNode.children[i]);
+
+     
+}
 // for( var i=0;i<no_of_feeder_id.length;i++){
 //     createTree(no_of_feeder_id[i].properties.feeder_id)
 // }
@@ -437,16 +470,19 @@ function createTree(feeder_id,grouped_list,feature_list_points){
             }
             else {
                 count2+=1;
-                console.log("ye nai hua",rows[i].properties.id,rows[i].properties.start_point,rows[i].properties.end_point);
+                console.log("Couldn't create node.",rows[i].properties.id,rows[i].properties.start_point,rows[i].properties.end_point);
             }
 
         });
     }  
+    tree._root.voltage=11;
     console.log(count,'done',count2,'failed');
     console.log("KVA =",findKv(tree._root));
     console.log("KM =",findKm(tree._root));
     renum(tree._root);
     console.log("Electrical Loss =", getElectricalLoss(tree._root.kv,tree._root.children[0],23.45));
+    console.log("Voltage =", getVoltage(11, tree._root));
+
     //electricalLoss(tree._root,25);
     //console.log(getTransformerLoss(currentNode.capacity,currentNode.line_current));
     return tree;
